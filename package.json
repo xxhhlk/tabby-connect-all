@@ -1,0 +1,40 @@
+{
+  "name": "tabby-connect-all",
+  "version": "1.0.0",
+  "description": "Connect every restored SSH, Telnet and Serial session in the background on Tabby startup, instead of waiting for each tab to be activated.",
+  "keywords": [
+    "tabby-plugin",
+    "tabby",
+    "tabby-terminal",
+    "ssh",
+    "telnet",
+    "serial",
+    "reconnect",
+    "startup",
+    "session-restore"
+  ],
+  "tabby": {
+    "name": "connect-all"
+  },
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node test/harness.js"
+  },
+  "author": "xxhhlk",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xxhhlk/tabby-connect-all.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xxhhlk/tabby-connect-all/issues"
+  },
+  "homepage": "https://github.com/xxhhlk/tabby-connect-all#readme",
+  "peerDependencies": {
+    "tabby-core": "*",
+    "tabby-terminal": "*"
+  }
+}
