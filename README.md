@@ -47,7 +47,7 @@ Everything is editable in the GUI: **Settings → Connect All** (tab with a plug
 | `delayMs` | `2000` | Grace period after the tab recovery pass finishes |
 | `types` | `[ssh, telnet, serial]` | Profile types to connect — tick `local` to also pre-start local shells |
 | `markActivity` | `true` | Call `displayActivity()` on tabs that connected |
-| `initialSize` | `{columns: 80, rows: 24}` | PTY size used until the tab is opened and a real resize arrives |
+| `initialSize` | `{columns: 80, rows: 24}` | PTY size used until the tab is opened and a real resize arrives. Unit: **character cells** (columns × rows), not pixels |
 
 Config file equivalent:
 
@@ -61,6 +61,25 @@ connectAll:
     columns: 80
     rows: 24
 ```
+
+### About `initialSize`
+
+The values are a character grid — `columns × rows` in terminal cells, the same thing `stty size` reports. They are handed to the remote PTY (`tabby-ssh` calls `resizePTY({ columns, rows, pixHeight: 0, pixWidth: 0 })`, which is why the pixel fields are hardcoded to 0). Values are clamped on read: columns to 20–1000, rows to 5–500, anything non-numeric falls back to the default.
+
+Two things follow from that:
+
+- **It only applies while the tab is in the background.** The moment you open the tab, the frontend reports its real size and overwrites it (`baseTerminalTab.component.ts` subscribes to `frontend.resize$` and assigns `this.size`).
+- **Scrollback written in the background keeps the wrapping it was printed with.** Terminal history is a character stream, not reflowable text, so a line that wrapped at 80 columns stays wrapped after you open the tab wider. If a background session prints long lines, set columns to at least your usual window width.
+
+To see what a session is really using, run this **inside the session** (not in your local shell):
+
+```bash
+stty size          # prints "rows columns" — rows first, unlike this setting
+tput cols; tput lines
+echo "$COLUMNS x $LINES"   # bash/zsh keep these up to date after a resize
+```
+
+Note the order: `stty size` prints **rows first**, while the GUI asks for **columns first**.
 
 ### About the marker at the bottom of the tab
 
@@ -91,7 +110,7 @@ The plugin is a plain CommonJS Angular module — no build step. Since there is 
 npm test
 ```
 
-The harness stubs `@angular/core`, `@angular/common` and `tabby-core` through `Module._load` and drives the module constructor with fake tabs. It asserts type filtering, split-pane flattening, concurrent start (measured spread of 0 ms), PTY size seeding, scrollback pre-write, the failure path, activity marking, and that exactly one `initializeSession()` call is swallowed on activation while a later reconnect still goes through.
+The harness stubs `@angular/core`, `@angular/common` and `tabby-core` through `Module._load` and drives the module constructor with fake tabs. It asserts type filtering, split-pane flattening, concurrent start (measured spread of 0 ms), PTY size seeding and clamping, scrollback pre-write, the failure path, activity marking, and that exactly one `initializeSession()` call is swallowed on activation while a later reconnect still goes through.
 
 ## Limitations
 

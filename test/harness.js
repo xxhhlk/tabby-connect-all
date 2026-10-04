@@ -216,6 +216,45 @@ async function main () {
     assert.strictEqual(localTab.activityMarked, false, 'untouched tabs stay unmarked')
     assert.strictEqual(sshConnected.activityMarked, false, 'already-connected tabs are left alone')
 
+    // --- the size is in character cells; out-of-range input must not reach the PTY
+    assert.ok(
+        ConnectAllSettingsTabComponent.__componentMeta.template.includes('character cells'),
+        'the settings label must state the unit',
+    )
+    assert.ok(
+        ConnectAllSettingsTabComponent.__componentMeta.template.includes('placeholder="columns"') &&
+        ConnectAllSettingsTabComponent.__componentMeta.template.includes('placeholder="rows"'),
+        'the two number inputs must say which one is which',
+    )
+
+    const clampTab = makeTab({ type: 'ssh' })
+    new ConnectAllModule(
+        { tabs: [clampTab] },
+        {
+            store: { connectAll: { delayMs: 0, initialSize: { columns: 0, rows: 99999 } } },
+            ready$: { toPromise: async () => undefined },
+        },
+        log,
+    )
+    await sleep(200)
+    assert.deepStrictEqual(
+        clampTab.size,
+        { columns: 80, rows: 500 },
+        'columns=0 falls back to the default, rows=99999 clamps to the max',
+    )
+
+    const missingSizeTab = makeTab({ type: 'ssh' })
+    new ConnectAllModule(
+        { tabs: [missingSizeTab] },
+        {
+            store: { connectAll: { delayMs: 0, initialSize: { columns: 'wide', rows: null } } },
+            ready$: { toPromise: async () => undefined },
+        },
+        log,
+    )
+    await sleep(200)
+    assert.deepStrictEqual(missingSizeTab.size, { columns: 80, rows: 24 }, 'non-numeric sizes fall back')
+
     const summary = logs.find(l => typeof l[2] === 'string' && l[2].startsWith('connected '))
     assert.ok(summary, 'expected a summary log line')
     assert.ok(summary[2].includes('4/6'), `summary should count 4 of 6, got: ${summary[2]}`)

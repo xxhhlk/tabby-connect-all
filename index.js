@@ -59,13 +59,28 @@ const SESSION_TYPES = [
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
+/** Terminal sizes are in character cells; a 0 here would break the remote PTY. */
+const SIZE_LIMITS = { columns: [20, 1000], rows: [5, 500] }
+
+function readSize (raw) {
+    const out = {}
+    for (const key of ['columns', 'rows']) {
+        const [min, max] = SIZE_LIMITS[key]
+        const value = Math.round(Number(raw && raw[key]))
+        out[key] = Number.isFinite(value) && value >= min
+            ? Math.min(value, max)
+            : DEFAULTS.initialSize[key]
+    }
+    return out
+}
+
 function readOptions (config) {
     const raw = (config.store && config.store.connectAll) || {}
     return {
         enabled: raw.enabled !== false,
         delayMs: typeof raw.delayMs === 'number' && raw.delayMs >= 0 ? raw.delayMs : DEFAULTS.delayMs,
         types: Array.isArray(raw.types) && raw.types.length ? raw.types : DEFAULTS.types,
-        initialSize: raw.initialSize || DEFAULTS.initialSize,
+        initialSize: readSize(raw.initialSize),
         markActivity: raw.markActivity !== false,
     }
 }
@@ -289,16 +304,20 @@ Component({
 
         <div class="form-line">
             <div class="header">
-                <div class="title">Initial terminal size</div>
+                <div class="title">Initial terminal size (columns x rows, in character cells)</div>
                 <div class="description">
-                    PTY size used until you open the tab and a real resize arrives.
+                    PTY size used until you open the tab and a real resize arrives. This is a
+                    character grid, not pixels. To see what a session is really using, run
+                    <code>stty size</code> in it — it prints <b>rows first</b>.
                 </div>
             </div>
             <div class="input-group">
-                <input type="number" class="form-control" min="20"
+                <input type="number" class="form-control" min="20" max="1000"
+                       placeholder="columns" title="columns (characters)"
                        [(ngModel)]="options.initialSize.columns" (ngModelChange)="save()">
                 <span class="input-group-text">x</span>
-                <input type="number" class="form-control" min="5"
+                <input type="number" class="form-control" min="5" max="500"
+                       placeholder="rows" title="rows (characters)"
                        [(ngModel)]="options.initialSize.rows" (ngModelChange)="save()">
             </div>
         </div>
