@@ -54,6 +54,8 @@ Everything is editable in the GUI: **Settings → Connect All** (tab with a plug
 | `markActivity` | `true` | Call `displayActivity()` on tabs that connected |
 | `initialSize` | `{columns: 80, rows: 24}` | PTY size used until the tab is opened and a real resize arrives. Unit: **character cells** (columns × rows), not pixels |
 
+In the GUI the two values are separate rows — *Initial terminal columns* and *Initial terminal rows*. They are deliberately **not** two inputs inside one Bootstrap `.input-group`: in Tabby's theme that renders as a black block where the `input-group-text` separator should be, with the two inputs showing no text at all. Tabby's own settings tabs put a single `input.form-control` directly under `.form-line`, and this plugin now does the same. `npm test` asserts that `.input-group` never comes back.
+
 Config file equivalent:
 
 ```yaml
@@ -85,6 +87,8 @@ echo "$COLUMNS x $LINES"   # bash/zsh keep these up to date after a resize
 ```
 
 Note the order: `stty size` prints **rows first**, while the GUI asks for **columns first**.
+
+If you open `config.yaml` and see `initialSize: {}` while the GUI shows 80 × 24, that is normal. `ConfigProxy.__cleanup()` deletes any key whose value equals its default before writing, so a value that has never been changed is simply absent from the file; the proxy still returns the default when you read it.
 
 ### About the marker at the bottom of the tab
 

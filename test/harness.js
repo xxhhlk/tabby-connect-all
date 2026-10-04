@@ -222,9 +222,22 @@ async function main () {
         'the settings label must state the unit',
     )
     assert.ok(
-        ConnectAllSettingsTabComponent.__componentMeta.template.includes('placeholder="columns"') &&
-        ConnectAllSettingsTabComponent.__componentMeta.template.includes('placeholder="rows"'),
-        'the two number inputs must say which one is which',
+        ConnectAllSettingsTabComponent.__componentMeta.template.includes('Initial terminal columns') &&
+        ConnectAllSettingsTabComponent.__componentMeta.template.includes('Initial terminal rows'),
+        'columns and rows must each have their own labelled row',
+    )
+    // Regression guard: two inputs inside one .input-group rendered as a black block
+    // separator with no visible text in Tabby's theme. Tabby's own settings tabs put a
+    // single `input.form-control` directly under `.form-line`, and so do we.
+    assert.ok(
+        !ConnectAllSettingsTabComponent.__componentMeta.template.includes('input-group'),
+        'do not use .input-group in a settings tab',
+    )
+    assert.strictEqual(
+        (ConnectAllSettingsTabComponent.__componentMeta.template.match(/<input[^>]*options\.initialSize\.(?:columns|rows)[^>]*>/g) || [])
+            .filter(tag => tag.includes('class="form-control"')).length,
+        2,
+        'both size fields must be plain .form-control inputs',
     )
 
     const clampTab = makeTab({ type: 'ssh' })

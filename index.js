@@ -304,22 +304,26 @@ Component({
 
         <div class="form-line">
             <div class="header">
-                <div class="title">Initial terminal size (columns x rows, in character cells)</div>
+                <div class="title">Initial terminal columns</div>
                 <div class="description">
-                    PTY size used until you open the tab and a real resize arrives. This is a
-                    character grid, not pixels. To see what a session is really using, run
+                    PTY width in character cells — a character grid, not pixels. Used until you
+                    open the tab and a real resize arrives.
+                </div>
+            </div>
+            <input type="number" class="form-control" min="20" max="1000"
+                   [(ngModel)]="options.initialSize.columns" (ngModelChange)="save()">
+        </div>
+
+        <div class="form-line">
+            <div class="header">
+                <div class="title">Initial terminal rows</div>
+                <div class="description">
+                    PTY height in character cells. To see what a session is really using, run
                     <code>stty size</code> in it — it prints <b>rows first</b>.
                 </div>
             </div>
-            <div class="input-group">
-                <input type="number" class="form-control" min="20" max="1000"
-                       placeholder="columns" title="columns (characters)"
-                       [(ngModel)]="options.initialSize.columns" (ngModelChange)="save()">
-                <span class="input-group-text">x</span>
-                <input type="number" class="form-control" min="5" max="500"
-                       placeholder="rows" title="rows (characters)"
-                       [(ngModel)]="options.initialSize.rows" (ngModelChange)="save()">
-            </div>
+            <input type="number" class="form-control" min="5" max="500"
+                   [(ngModel)]="options.initialSize.rows" (ngModelChange)="save()">
         </div>
 
         <div class="form-line">
