@@ -10,7 +10,7 @@ A Tabby plugin that **connects every restored session in the background on start
 - Works with sessions inside split panes
 - Output produced while a tab sits in the background is buffered by Tabby and flushed the moment you open the tab — **nothing is lost**, and you don't miss the login banner or prompt
 - The tab header's activity marker (the 2 px line at the bottom of the tab) is lit up on the sessions that came up, so you can see at a glance which ones are live
-- Configurable: delay, session types, initial PTY size, activity marker
+- Configurable from the GUI (**Settings → Connect All**) or from the config file: delay, session types, initial PTY size, activity marker
 
 ## Installation
 
@@ -39,26 +39,28 @@ Copy this folder to `%APPDATA%\tabby\plugins\node_modules\tabby-connect-all` and
 
 ## Configuration
 
-Optional. Defaults are in the table below; override them in `%APPDATA%\tabby\config.yaml` (macOS/Linux: `~/.config/tabby/config.yaml`).
-
-```yaml
-connectAll:
-  enabled: true
-  delayMs: 2000                  # wait after tab recovery before connecting
-  types: [ssh, telnet, serial]   # add `local` to also pre-start local shells
-  markActivity: true             # light up the tab's activity marker once connected
-  initialSize:
-    columns: 80
-    rows: 24
-```
+Everything is editable in the GUI: **Settings → Connect All** (tab with a plug icon). The same values live under `connectAll` in the config file, so you can also edit them by hand.
 
 | Option | Default | Description |
 |---|---|---|
 | `enabled` | `true` | Turn the startup pass off without uninstalling |
 | `delayMs` | `2000` | Grace period after the tab recovery pass finishes |
-| `types` | `[ssh, telnet, serial]` | Profile types to connect |
+| `types` | `[ssh, telnet, serial]` | Profile types to connect — tick `local` to also pre-start local shells |
 | `markActivity` | `true` | Call `displayActivity()` on tabs that connected |
 | `initialSize` | `{columns: 80, rows: 24}` | PTY size used until the tab is opened and a real resize arrives |
+
+Config file equivalent:
+
+```yaml
+connectAll:
+  enabled: true
+  delayMs: 2000
+  types: [ssh, telnet, serial]
+  markActivity: true
+  initialSize:
+    columns: 80
+    rows: 24
+```
 
 ### About the marker at the bottom of the tab
 
@@ -81,7 +83,7 @@ Four things had to be handled, and they are the reason this plugin exists rather
 | `setupOneSession()` immediately writes `Connecting to <host>` to the frontend, while the saved scrollback is only appended later by `onFrontendReady()` — the terminal would show *Connecting → history → live output* | Write `savedState` into the frontend and clear it before connecting, restoring *history → Connecting → live output* |
 | A tab connected in the background shows no activity marker, because the marker is driven by output that is still buffered | Call `tab.displayActivity()` after a successful connect |
 
-The plugin is a plain CommonJS Angular module — no build step. Since there is no TypeScript compiler to emit `design:paramtypes`, the constructor metadata is declared by hand with `Reflect.defineMetadata` (plus the static `parameters` form). `xterm.open()` is deliberately never called: it has no re-entrancy guard, so attaching a frontend twice would append a second terminal element.
+The plugin is a plain CommonJS Angular module — no build step. Since there is no TypeScript compiler to emit `design:paramtypes`, the constructor metadata is declared by hand with `Reflect.defineMetadata` (plus the static `parameters` form). The settings tab is a component with an inline template declared in the plugin's own `NgModule`, which registers a `SettingsTabProvider` (`tabby-settings`) and a `ConfigProvider` (`tabby-core`) so the defaults show up in the config file. `xterm.open()` is deliberately never called: it has no re-entrancy guard, so attaching a frontend twice would append a second terminal element.
 
 ## Testing
 

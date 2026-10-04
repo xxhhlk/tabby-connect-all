@@ -1,6 +1,6 @@
 {
   "name": "tabby-connect-all",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Connect every restored SSH, Telnet and Serial session in the background on Tabby startup, instead of waiting for each tab to be activated.",
   "keywords": [
     "tabby-plugin",

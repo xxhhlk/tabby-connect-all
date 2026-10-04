@@ -12,14 +12,33 @@ const assert = require('assert')
 const Module = require('module')
 
 const NgModule = meta => cls => { cls.__ngModuleMeta = meta; return cls }
+const Component = meta => cls => { cls.__componentMeta = meta; return cls }
+
+class StubConfigProvider {
+    constructor () {
+        this.platformDefaults = {}
+    }
+}
+class StubSettingsTabProvider {
+    constructor () {
+        this.weight = 0
+        this.prioritized = false
+    }
+    getComponentType () { return null }
+}
+class StubTabbyCoreModule {}
 
 const stubs = {
-    '@angular/core': { NgModule },
+    '@angular/core': { NgModule, Component },
     '@angular/common': { CommonModule: class CommonModule {} },
+    '@angular/forms': { FormsModule: class FormsModule {} },
+    'tabby-settings': { SettingsTabProvider: StubSettingsTabProvider },
     'tabby-core': {
         AppService: class AppService {},
         ConfigService: class ConfigService {},
         LogService: class LogService {},
+        ConfigProvider: StubConfigProvider,
+        default: StubTabbyCoreModule,
     },
 }
 
@@ -32,6 +51,7 @@ Module._load = function (request) {
 }
 
 const ConnectAllModule = require('../index.js')
+const ConnectAllSettingsTabComponent = ConnectAllModule.ConnectAllSettingsTabComponent
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -63,12 +83,70 @@ function makeTab ({ type, open = false, fail = false, delay = 30, hasSession = f
 
 async function main () {
     // --- plugin shape (what Tabby's plugin loader expects) -------------------
-    assert.ok(ConnectAllModule.__ngModuleMeta, 'NgModule() must have been applied')
+    const meta = ConnectAllModule.__ngModuleMeta
+    assert.ok(meta, 'NgModule() must have been applied')
     assert.strictEqual(require('../index.js').default, ConnectAllModule, 'loader reads module.default')
     assert.ok(
         Array.isArray(ConnectAllModule.parameters) && ConnectAllModule.parameters.length === 3,
         'design:paramtypes must be declared for Angular DI',
     )
+
+    // --- settings tab registration ------------------------------------------
+    assert.ok(
+        meta.declarations.includes(ConnectAllSettingsTabComponent),
+        'the settings component must be declared so resolveComponentFactory() can build it',
+    )
+    const configProviderEntry = meta.providers.find(p => p.provide === StubConfigProvider)
+    assert.ok(configProviderEntry?.multi, 'ConfigProvider must be registered as a multi provider')
+    const tabProviderEntry = meta.providers.find(p => p.provide === StubSettingsTabProvider)
+    assert.ok(tabProviderEntry?.multi, 'SettingsTabProvider must be registered as a multi provider')
+    assert.ok(meta.imports.includes(StubTabbyCoreModule), 'TabbyCoreModule must be imported for <toggle>')
+
+    const tabProvider = new tabProviderEntry.useClass()
+    assert.strictEqual(tabProvider.getComponentType(), ConnectAllSettingsTabComponent)
+    assert.strictEqual(tabProvider.id, 'connect-all')
+    assert.strictEqual(tabProvider.title, 'Connect All')
+
+    // config defaults provider
+    const defaults = new configProviderEntry.useClass().defaults
+    assert.strictEqual(defaults.connectAll.enabled, true)
+    assert.strictEqual(defaults.connectAll.delayMs, 2000)
+    assert.deepStrictEqual(defaults.connectAll.types, ['ssh', 'telnet', 'serial'])
+    assert.strictEqual(defaults.connectAll.markActivity, true)
+
+    // component metadata: inline template, no build step
+    assert.ok(ConnectAllSettingsTabComponent.__componentMeta?.template.includes('connectAll'))
+    assert.ok(ConnectAllSettingsTabComponent.__componentMeta.template.includes('<toggle'))
+    assert.ok(
+        Array.isArray(ConnectAllSettingsTabComponent.parameters) &&
+        ConnectAllSettingsTabComponent.parameters.length === 1,
+        'the settings component needs design:paramtypes too',
+    )
+
+    // --- settings component behaviour ---------------------------------------
+    let saves = 0
+    const store = {
+        connectAll: {
+            enabled: true,
+            delayMs: 2000,
+            types: ['ssh', 'telnet', 'serial'],
+            markActivity: true,
+            initialSize: { columns: 80, rows: 24 },
+        },
+    }
+    const settings = new ConnectAllSettingsTabComponent({ store, save: () => saves++ })
+
+    assert.strictEqual(settings.hasType('ssh'), true)
+    assert.strictEqual(settings.hasType('local'), false)
+    settings.toggleType('local', true)
+    assert.deepStrictEqual(store.connectAll.types, ['ssh', 'telnet', 'serial', 'local'])
+    assert.strictEqual(saves, 1, 'toggling must persist')
+    settings.toggleType('telnet', false)
+    assert.deepStrictEqual(store.connectAll.types, ['ssh', 'serial', 'local'], 'order stays canonical')
+    settings.reset()
+    assert.strictEqual(saves, 3, 'reset must persist')
+    assert.deepStrictEqual(store.connectAll.types, ['ssh', 'telnet', 'serial'])
+    assert.strictEqual(store.connectAll.delayMs, 2000)
 
     // --- fake services -----------------------------------------------------
     const logs = []
