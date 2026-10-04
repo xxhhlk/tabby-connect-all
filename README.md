@@ -25,7 +25,12 @@ npm install tabby-connect-all
 
 Then **restart Tabby completely**.
 
-Alternatively: Tabby → Settings → Plugins → search `connect-all` → Install.
+Alternatively: Tabby → Settings → Plugins → **Available** → search `connect-all` → *Get*.
+
+> **Two reasons the in-app search may look empty.**
+>
+> 1. **It is already installed.** The Available tab hides every plugin that is already present: `ngb-panel(*ngIf='!isAlreadyInstalled(plugin))` in `pluginsSettingsTab.component.pug`. If you installed it with the `npm install` command above, look under the **Installed** tab instead — that is where it lives.
+> 2. **npm's search index has stopped picking up newly created packages.** Tabby's list comes from `https://registry.npmjs.com/-/v1/search?text=keywords:tabby-plugin%20<query>`, sorted by npm's `searchScore`. Measured on 2026-10-05, across all 162 packages with the `tabby-plugin` keyword, the only three with `searchScore: 0` were the only three created after 2026-09-26 — including this one. Every package created on or before 2026-09-26 scored 4.3–46. A zero score puts the entry at the bottom of the list, and npm search *re-ranks* rather than *filters*, so typing the exact name does not pull it out. Download counts are not the cause (`tabby-opencode-status` has 292 weekly downloads and still scores 0). Nothing is wrong with the package name or keywords — Tabby does receive the entry, just last. Until npm's index catches up, use the `npm install` command above.
 
 ### From source
 
